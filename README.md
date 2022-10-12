@@ -121,11 +121,11 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/mas
 
 **Create a fork of this repository**
 
-Create a fork of MitwRdam/MakeAIWork in [GitHub](https://github.com/MitwRdam/MakeAIWork2) or
+Create a fork of AlxcNL/MakeAIWork2 in [GitHub](https://github.com/AlxcNL/MakeAIWork2) or
 use the GitHub Client by entering the following commands in your terminal
 
 ```bash
-gh repo fork https://github.com/MitwRdam/MakeAIWork
+gh repo fork https://github.com/AlxcNL/MakeAIWork2
 ```
 </li>
 
@@ -151,7 +151,7 @@ git clone git@github.com:{your_github_username}/MakeAIWork2.git
 
 In order to commit and push your changes, you need identitify yourself.
 
-Open a (git)bash, enter directory MakeAIWork and run:
+Open a (git)bash, enter directory MakeAIWork2 and run:
 ```bash
 install/git_config.sh {your_github_username} {your@student.email.com}
 ```
@@ -167,7 +167,7 @@ To be able To be able to fetch and merge changes from this repository using (bas
 If you used the GitHub client to create the fork you can <strong>skip</strong> this step, otherwise enter the following commands
 
 ```bash
-git remote add mitwrdam https://github.com/MitwRdam/MakeAIWork
+git remote add AlxcNL https://github.com/AlxcNL/MakeAIWork2
 ```
 
 </li>
@@ -177,7 +177,7 @@ git remote add mitwrdam https://github.com/MitwRdam/MakeAIWork
 Keep your fork repository up-todate by regularly pulling changes from the original remote repository into your local fork..
 
 ```bash
- git pull mitwrdam main
+ git pull AlxcNL main
 ```
 
 and push the changes to you remote fork
@@ -267,9 +267,9 @@ In VSCode, open the Command Palette and type 'shell command' in order to select 
 
 **Start vscode with command from current directory**
 
-Start a (git) bash shell and enter directory MakeAIWork, from there use the command <i>code</i> to start vscode.
+Start a (git) bash shell and enter directory MakeAIWork2, from there use the command <i>code</i> to start vscode.
 ```sh
-cd MakeAIWork
+cd MakeAIWork2
 code .
 ```
 
