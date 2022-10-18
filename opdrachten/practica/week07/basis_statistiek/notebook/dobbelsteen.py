@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 import random
+import numpy as np
+
 
 class Dobbelsteen:
     
     def __init__(self):
-        self.values = set(range(1, 7))  
+        self.values = set(range(1, 7))
+        self.history = list()  #
         self.roll()
         
         # https://realpython.com/python-dice-roll
@@ -74,6 +77,10 @@ class Dobbelsteen:
 
     def roll(self):
         self.number = random.choice(self.getList())
+        self.history.append(self.number)
+
+    def getHistory(self):
+        return self.history
 
     def getNumber(self):
         return self.number

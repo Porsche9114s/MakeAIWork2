@@ -1,0 +1,6 @@
+array = np.array(img) #hier maken we een numpy array van onze variabele img (waar plaatje aarde in staat)
+type(array)
+scaleFactor = 1 #hier zetten we de scale factor (nu dus 1 want dat is onze basis)
+scaleArray = ndimage.zoom(array, (scaleFactor,scaleFactor, 1)) #hier schalen we onze array op de x en y as(niet de Z as dat is de 1 en die blijft 1)
+imgScaled = Image.fromarray(scaleArray)
+imgScaled.show()
