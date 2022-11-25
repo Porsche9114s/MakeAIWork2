@@ -11,6 +11,38 @@ import random
 # Use 1 contains random chosen 80 unlabeled apples
 # Use 2 contains 77 healty apples and three other
 
+data_dir = 'Train'
+
+train_ds = tf.keras.utils.image_dataset_from_directory(
+    data_dir, validation_split=0.2, subset='training', seed=123, image_size=(224, 224), batch_size=120)
+
+val_ds = tf.keras.utils.image_dataset_from_directory(
+    data_dir, validation_split=0.2, subset='validation', seed=123, image_size=(224, 224), batch_size=120)
+
+#apple_dir = 'Use'
+#apple_dir = 'Use1'
+apple_dir = 'Use2'
+#apple_dir = 'Use3'
+
+apple_ds = tf.keras.utils.image_dataset_from_directory(
+    apple_dir, image_size=(224, 224), labels = None)
+
+class_names = train_ds.class_names
+num_classes = len(class_names)
+
+# Preprocess
+# The preprocess_input function is meant to adequate your image to the format the model requires
+preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
+
+# Rescale
+# A preprocessing layer which rescales input values to a new range.
+tf.keras.layers.Rescaling(scale=1./255)
+
+# Add augmentation
+data_augmentation = tf.keras.Sequential([
+  layers.RandomFlip("horizontal_and_vertical"),
+  layers.RandomRotation(0.2)])
+"""
 #apple_dir = 'Use'
 #apple_dir = 'Use1'
 apple_dir = 'Use2'
@@ -21,15 +53,221 @@ apple_ds = tf.keras.utils.image_dataset_from_directory(
 
 # class_names = train_ds.class_names
 # num_classes = len(class_names)
+"""
+# Set image size
+img_height = 224
+img_width = 224
+IMG_SIZE = img_width, img_height
+IMG_SHAPE = IMG_SIZE + (3,)
+
+# After testing and evaluation we decided to youse the pre-trained model. This model had the best performance and was still
+# abble to perform fast on my labtop.
+
+# Model van MobileNet
+# A pre-trained model is a saved network that was previously trained on a large dataset, typically on a 
+# large-scale image-classification task.
+
+base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
+                                               include_top=False,
+                                               weights='imagenet')
+
+base_model.summary()
+
+base_model.trainable = False
+
+# Feature extraction
+# Aims to reduce the number of features in a dataset by creating new features from the existing ones
+
+image_batch, label_batch = next(iter(train_ds))
+feature_batch = base_model(image_batch)
+print(feature_batch.shape)
+
+# globalAveragePooling2d() function is used for applying global average pooling operation for spatial data
+
+global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+feature_batch_average = global_average_layer(feature_batch)
+print(feature_batch_average.shape)
+
+prediction_layer = tf.keras.layers.Dense(4)
+prediction_batch = prediction_layer(feature_batch_average)
+print(prediction_batch.shape)
+
+inputs = tf.keras.Input(shape=(224, 224, 3))
+x = data_augmentation(inputs)
+x = preprocess_input(x)
+x = tf.keras.layers.Rescaling(scale=1./255)(inputs)
+x = base_model(x, training=False)
+x = global_average_layer(x)
+x = tf.keras.layers.Dropout(0.3)(x)
+outputs = prediction_layer(x)
+
+modelX = tf.keras.Model(inputs, outputs)
+
+#print(modelX)
+
+# Optimize
+# Compile defines the loss function, the optimizer and the metrics
+# Cross-entropy loss is used when adjusting model weights during training. The aim is to minimize the loss
+
+base_learning_rate = 0.0001
+modelX.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=base_learning_rate),
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+modelX.summary()
+
+len(modelX.trainable_variables)
+
+# Standard loss and accuracy before training of the model with 25 training run's
+
+
+initial_epochs = 30
+
+loss0, accuracy0 = modelX.evaluate(val_ds)
+
+print("initial loss: {:.2f}".format(loss0))
+print("initial accuracy: {:.2f}".format(accuracy0))
+
+# Start training the model.
+
+history = modelX.fit(train_ds,
+                    epochs=initial_epochs,
+                    validation_data=val_ds)
+
+acc = history.history['accuracy']
+val_acc = history.history['val_accuracy']
+
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+plt.figure(figsize=(8, 8))
+plt.subplot(2, 1, 1)
+plt.plot(acc, label='Training Accuracy')
+plt.plot(val_acc, label='Validation Accuracy')
+plt.legend(loc='lower right')
+plt.ylabel('Accuracy')
+plt.ylim([min(plt.ylim()),1])
+plt.title('Training and Validation Accuracy')
+
+plt.subplot(2, 1, 2)
+plt.plot(loss, label='Training Loss')
+plt.plot(val_loss, label='Validation Loss')
+plt.legend(loc='upper right')
+plt.ylabel('Cross Entropy')
+plt.ylim([0,2.0])
+plt.title('Training and Validation Loss')
+plt.xlabel('epoch')
+plt.show()
+
+# Unfreeze the frosen part of the MobileNet.
+
+base_model.trainable = True
+
+# Let's take a look to see how many layers are in the base model
+print("Number of layers in the base model: ", len(base_model.layers))
+
+# Fine-tune from this layer onwards
+fine_tune_at = 100
+
+# Freeze all the layers before the `fine_tune_at` layer
+for layer in base_model.layers[:fine_tune_at]:
+  layer.trainable = False
+
+# Optimize
+# Compile defines the loss function, the optimizer and the metrics
+# Cross-entropy loss is used when adjusting model weights during training. The aim is to minimize the loss
+
+modelX.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              optimizer = tf.keras.optimizers.RMSprop(learning_rate=base_learning_rate/10),
+              metrics=['accuracy'])
+
+modelX.summary()
+
+#vanaf 100 dus 100 ook en 154 ook
+
+len(modelX.trainable_variables)
+
+# Continue training the model.
+
+fine_tune_epochs = 8
+total_epochs =  initial_epochs + fine_tune_epochs
+
+history_fine = modelX.fit(train_ds,
+                         epochs=total_epochs,
+                         initial_epoch=history.epoch[-1],
+                         validation_data=val_ds)
+
+# show the values after the second training of the model in a diagram.
+
+acc += history_fine.history['accuracy']
+val_acc += history_fine.history['val_accuracy']
+
+loss += history_fine.history['loss']
+val_loss += history_fine.history['val_loss']
+
+plt.figure(figsize=(8, 8))
+plt.subplot(2, 1, 1)
+plt.plot(acc, label='Training Accuracy')
+plt.plot(val_acc, label='Validation Accuracy')
+plt.ylim([0.2, 0.95])
+plt.plot([initial_epochs-1,initial_epochs-1],
+          plt.ylim(), label='Start Fine Tuning')
+plt.legend(loc='upper left')
+plt.title('Training and Validation Accuracy')
+
+plt.subplot(2, 1, 2)
+plt.plot(loss, label='Training Loss')
+plt.plot(val_loss, label='Validation Loss')
+plt.ylim([0, 2.0])
+plt.plot([initial_epochs-1,initial_epochs-1],
+         plt.ylim(), label='Start Fine Tuning')
+plt.legend(loc='upper right')
+plt.title('Training and Validation Loss')
+plt.xlabel('epoch')
+plt.show()
+
+#Evaluate the model.
+
+modelX.evaluate(train_ds)
+
+# Make a Confusion matrix to show the labels and prediction
+
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay
+
+data_dir = 'test'
+
+test_ds = tf.keras.utils.image_dataset_from_directory(
+    data_dir, seed=123, image_size=(224, 224),shuffle = False, batch_size=120)
+
+batchPredictions = modelX.predict(test_ds)
+
+predicted_categories = tf.argmax(batchPredictions, axis=1)
+
+true_categories = tf.concat([y for x, y in test_ds], axis=0)
+
+cm = confusion_matrix(true_categories, predicted_categories)
+
+cmd = ConfusionMatrixDisplay(cm, display_labels=['blotch','normal','rot','scab'])
+
+cmd.plot()
+
+# Save the model.
+modelX.save('janmodelpython')
+
+
+batchPredictions = modelX.predict(apple_ds)
+
+predicted_categories = tf.argmax(batchPredictions, axis=1)
+print(predicted_categories)
+
+
 
 
 # Load het getrainde model.
 
-modelX = tf.keras.models.load_model('janmodel')
+# modelX = tf.keras.models.load_model('janmodelpython')
 
-# Load het getrainde model.
-
-modelX = tf.keras.models.load_model('janmodel')
 
 
 # Make a list from the outcome and print them.
